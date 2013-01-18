@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAcn//8KA\u003d",
+        "filename": "arch/arm/configs/cyanogen_tapioca_defconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 611,
+      "author": {
+        "id": 2505
+      },
+      "writtenOn": "2013-01-18T13:01:51Z",
+      "side": 1,
+      "message": "shouldn\u0027t CONFIG_CPU_FREQ_GOV_PERFORMANCE also be set to y?",
+      "revId": "a68b3615a26382e0dddead656505144ee72b214b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}

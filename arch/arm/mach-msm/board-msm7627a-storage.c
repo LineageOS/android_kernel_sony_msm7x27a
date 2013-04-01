@@ -58,6 +58,25 @@ static struct msm_gpio sdc1_cfg_data[] = {
 								"sdc1_clk"},
 };
 
+#ifdef CONFIG_FIH_SEMC_S1
+//BSP-AlwaysChen-PortingFrom2045-01+[
+static struct msm_gpio sdc1_sleep_cfg_data[] = {
+	{GPIO_CFG(51, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+								"sdc1_dat_3"},
+	{GPIO_CFG(52, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+								"sdc1_dat_2"},
+	{GPIO_CFG(53, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+								"sdc1_dat_1"},
+	{GPIO_CFG(54, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+								"sdc1_dat_0"},
+	{GPIO_CFG(55, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+								"sdc1_cmd"},
+	{GPIO_CFG(56, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+								"sdc1_clk"},
+};
+//BSP-AlwaysChen-PortingFrom2045-01+]
+#endif
+
 static struct msm_gpio sdc2_cfg_data[] = {
 	{GPIO_CFG(62, 2, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 								"sdc2_clk"},
@@ -112,6 +131,35 @@ static struct msm_gpio sdc3_cfg_data[] = {
 #endif
 };
 
+#ifdef CONFIG_FIH_SEMC_S1
+//BSP-AlwaysChen-PortingFrom2045-01+[
+static struct msm_gpio sdc3_sleep_cfg_data[] = {
+	{GPIO_CFG(88, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+								"sdc3_clk"},
+	{GPIO_CFG(89, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_cmd"},
+	{GPIO_CFG(90, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_3"},
+	{GPIO_CFG(91, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_2"},
+	{GPIO_CFG(92, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_1"},
+	{GPIO_CFG(93, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_0"},
+#ifdef CONFIG_MMC_MSM_SDC3_8_BIT_SUPPORT
+	{GPIO_CFG(19, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_7"},
+	{GPIO_CFG(20, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_6"},
+	{GPIO_CFG(21, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_5"},
+	{GPIO_CFG(108, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+								"sdc3_dat_4"},
+#endif
+};
+//BSP-AlwaysChen-PortingFrom2045-01+]
+#endif
+
 static struct msm_gpio sdc4_cfg_data[] = {
 	{GPIO_CFG(19, 1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_10MA),
 								"sdc4_dat_3"},
@@ -131,6 +179,9 @@ static struct sdcc_gpio sdcc_cfg_data[] = {
 	{
 		.cfg_data = sdc1_cfg_data,
 		.size = ARRAY_SIZE(sdc1_cfg_data),
+#ifdef CONFIG_FIH_SEMC_S1
+		.sleep_cfg_data = sdc1_sleep_cfg_data, //BSP-AlwaysChen-PortingFrom2045-01+
+#endif
 	},
 	{
 		.cfg_data = sdc2_cfg_data,
@@ -140,16 +191,17 @@ static struct sdcc_gpio sdcc_cfg_data[] = {
 	{
 		.cfg_data = sdc3_cfg_data,
 		.size = ARRAY_SIZE(sdc3_cfg_data),
+#ifdef CONFIG_FIH_SEMC_S1
+		.sleep_cfg_data = sdc3_sleep_cfg_data, //BSP-AlwaysChen-PortingFrom2045-01+
+#endif
 	},
 	{
 		.cfg_data = sdc4_cfg_data,
 		.size = ARRAY_SIZE(sdc4_cfg_data),
 	},
 };
-/* << WilliamHu,2012/04/20,BU1,Change uSD Detection from GPIO 85 Harry to GPIO 17 Nanhu_PDP  */
+
 static int gpio_sdc1_hw_det = 17;
- //static int gpio_sdc1_hw_det = 85;
-/* >> WilliamHu,2012/04/20,BU1,Change uSD Detection from GPIO 85 Harry to  GPIO 17 Nanhu_PDP  */
 static void gpio_sdc1_config(void)
 {
 	if (machine_is_msm7627a_qrd1() || machine_is_msm7627a_evb()
@@ -166,10 +218,13 @@ static int msm_sdcc_setup_gpio(int dev_id, unsigned int enable)
 	struct sdcc_gpio *curr;
 
 	curr = &sdcc_cfg_data[dev_id - 1];
+#ifdef CONFIG_FIH_SEMC_S1
+	if (!(test_bit(dev_id, &gpio_sts)^enable))
+#else
 /* << WilliamHu,2012/03/28,BU1,Fix: Unstable to switch COM Port into Download mode  */
-  if (!(test_bit(dev_id, &gpio_sts)^enable)||(3 == dev_id))
-	//if (!(test_bit(dev_id, &gpio_sts)^enable))
+	if (!(test_bit(dev_id, &gpio_sts)^enable)||(3 == dev_id))
 /* >> WilliamHu,2012/03/28,BU1,Fix: Unstable to switch COM Port into Download mode  */
+#endif
 		return rc;
 
 	if (enable) {
@@ -221,6 +276,11 @@ static int msm_sdcc_setup_vreg(int dev_id, unsigned int enable)
 	}
 	return rc;
 }
+#ifdef CONFIG_FIH_SEMC_S1
+//CONN-EC-Regulator-01+[
+#define WLAN_SLOT 2
+//CONN-EC-Regulator-01+]
+#endif
 
 static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 {
@@ -232,8 +292,16 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	rc = msm_sdcc_setup_gpio(pdev->id, !!vdd);
 	if (rc)
 		goto out;
-
+#ifdef CONFIG_FIH_SEMC_S1
+//CONN-EC-Regulator-01*[
+    if (pdev->id == WLAN_SLOT) {
+    } else {
+        rc = msm_sdcc_setup_vreg(pdev->id, !!vdd);
+    }
+//CONN-EC-Regulator-01*]
+#else
 	rc = msm_sdcc_setup_vreg(pdev->id, !!vdd);
+#endif
 out:
 	return rc;
 }
@@ -243,6 +311,8 @@ static unsigned int msm7627a_sdcc_slot_status(struct device *dev)
 {
 	int status;
 
+    	status = gpio_get_value(gpio_sdc1_hw_det);
+#ifndef CONFIG_FIH_SEMC_S1
 	status = gpio_tlmm_config(GPIO_CFG(gpio_sdc1_hw_det, 2, GPIO_CFG_INPUT,
 				GPIO_CFG_PULL_UP, GPIO_CFG_8MA),
 				GPIO_CFG_ENABLE);
@@ -275,6 +345,11 @@ static unsigned int msm7627a_sdcc_slot_status(struct device *dev)
 #else
 	return status;
 #endif
+#endif
+#ifdef CONFIG_FIH_SEMC_S1
+	return (unsigned int)!status;
+#endif
+
 //>>FerryWu,2011/09/20,BU1,sdcard config for WhartonLiteA
 }
 
@@ -394,13 +469,25 @@ void __init msm7627a_init_mmc(void)
 		sdc1_plat_data.status_irq = MSM_GPIO_TO_INT(gpio_sdc1_hw_det);
 	if (machine_is_msm8625_evt())
 		sdc1_plat_data.status = NULL;
+#ifdef CONFIG_FIH_SEMC_S1
+	#ifdef gpio_sdc1_hw_det
+		gpio_tlmm_config(GPIO_CFG(gpio_sdc1_hw_det, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+			             GPIO_CFG_ENABLE);
+		sdc1_plat_data.status_irq  = MSM_GPIO_TO_INT(gpio_sdc1_hw_det);	
+	#else
+		sdc1_plat_data.status = NULL;
+		sdc1_plat_data.status_irq  = 0;	
+	#endif
+#endif
 
 	msm_add_sdcc(1, &sdc1_plat_data);
 #endif
 	/* SDIO WLAN slot */
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
+#ifndef CONFIG_FIH_SEMC_S1
 	if (mmc_regulator_init(2, "smps3", 1800000))
 		return;
+#endif
 	msm_add_sdcc(2, &sdc2_plat_data);
 #endif
 	/* Not Used */

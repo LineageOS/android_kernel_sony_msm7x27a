@@ -64,9 +64,11 @@ static struct msm_rpc_endpoint *rpc_cb_server_client;
 static struct msm_adsp_module *adsp_modules;
 static int adsp_open_count;
 
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20111026 Avoid conflict with other APPs ++*/
 int *APPs_count;
 /*-- Kevin Shiu - 20111026 Avoid conflict with other APPs --*/
+#endif
 static uint32_t rpc_adsp_rtos_atom_prog;
 static uint32_t rpc_adsp_rtos_atom_vers;
 static uint32_t rpc_adsp_rtos_atom_vers_comp;
@@ -1479,10 +1481,12 @@ static int __init adsp_init(void)
 	msm_adsp_driver.driver.name = msm_adsp_driver_name;
 	rc = platform_driver_register(&msm_adsp_driver);
 	MM_INFO("%s -- %d\n", msm_adsp_driver_name, rc);
-	
+
+#ifndef CONFIG_FIH_SEMC_S1	
 	/*++ Kevin Shiu - 20111026 Avoid conflict with other APPs ++*/
 	APPs_count = &adsp_open_count;
 	/*++ Kevin Shiu - 20111026 Avoid conflict with other APPs ++*/
+#endif
 	
 	return rc;
 }

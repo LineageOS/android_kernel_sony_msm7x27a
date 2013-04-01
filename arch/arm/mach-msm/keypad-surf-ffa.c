@@ -56,7 +56,7 @@ static unsigned int keypad_col_gpios_8k_ffa[] = {38, 39, 40, 41, 42};
 static const unsigned short keypad_keymap_surf[ARRAY_SIZE(keypad_col_gpios) *
 					  ARRAY_SIZE(keypad_row_gpios)] = {
 //<<FerryWu,2011/09/10,BU1,Keypad config for WhartonLiteA
-#if 1
+#ifndef CONFIG_FIH_SEMC_S1
 	[KEYMAP_INDEX(0, 0)] = KEY_VOLUMEUP,
 	[KEYMAP_INDEX(0, 1)] = KEY_VOLUMEDOWN,
 #else
@@ -109,7 +109,7 @@ static const unsigned short keypad_keymap_surf[ARRAY_SIZE(keypad_col_gpios) *
 static const unsigned short keypad_keymap_ffa[ARRAY_SIZE(keypad_col_gpios) *
 					      ARRAY_SIZE(keypad_row_gpios)] = {
 //<<FerryWu,2011/09/10,BU1,Keypad config for WhartonLiteA
-#if 1
+#ifndef CONFIG_FIH_SEMC_S1
 	[KEYMAP_INDEX(0, 0)] = KEY_VOLUMEUP,
 	[KEYMAP_INDEX(0, 1)] = KEY_VOLUMEDOWN,
 #else

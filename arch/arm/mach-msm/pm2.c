@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2008-2012 Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2011-2012, Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,7 +46,9 @@
 #include <mach/socinfo.h>
 #include <mach/proc_comm.h>
 #include <asm/smp_scu.h>
-
+#ifdef CONFIG_FIH_SEMC_S1
+#include <mach/socinfo.h>	/* Kernel-TH-suspendsetfreq-00+ */
+#endif
 #include "smd_private.h"
 #include "smd_rpcrouter.h"
 #include "acpuclock.h"
@@ -59,6 +62,12 @@
 #include "sirc.h"
 #include "pm-boot.h"
 #include "devices-msm7x2xa.h"
+
+/* FIH-SW3-KERNEL-TH-add_last_alog-00+[ */
+#ifdef CONFIG_FEATURE_FIH_SW3_LAST_ALOG
+#include "mach/alog_ram_console.h"
+#endif 
+/* FIH-SW3-KERNEL-TH-add_last_alog-00+] */
 
 /******************************************************************************
  * Debug Definitions
@@ -394,6 +403,16 @@ s32 msm_cpuidle_get_deep_idle_latency(void)
 	int i = MSM_PM_MODE(0, MSM_PM_SLEEP_MODE_POWER_COLLAPSE_NO_XO_SHUTDOWN);
 	return msm_pm_modes[i].latency - 1;
 }
+
+#ifdef CONFIG_FIH_SEMC_S1
+//FIH-SW-KERNEL-KC-TCXO_SD_DURING_DISPLAY_ON-01+[
+s32 msm_cpuidle_get_deepest_idle_latency(void)
+{
+	int i = MSM_PM_MODE(0, MSM_PM_SLEEP_MODE_POWER_COLLAPSE);
+	return msm_pm_modes[i].latency - 1;
+}
+//FIH-SW-KERNEL-KC-TCXO_SD_DURING_DISPLAY_ON-01+]
+#endif
 
 void __init msm_pm_set_platform_data(
 	struct msm_pm_platform_data *data, int count)
@@ -841,6 +860,67 @@ static int msm_pm_modem_busy(void)
 	return 0;
 }
 
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+void show_smem_sleep_info(void);
+
+static const char* str_reason[] =
+{
+    "SMD",
+    "INT",
+    "GPIO",
+    "TIMER",
+    "ALARM",
+    "RESET",
+    "OTHER",
+    "REMOTE",
+};
+
+static void show_wakeup_info(struct msm_pm_smem_t *demData)
+{
+	int i = 0;
+
+	show_smem_sleep_info();
+	printk(KERN_EMERG "[PM] sleep_time=0x%08X, limit_sleep=0x%08X, wakeup_reason=0x%08X, interrupts_pendding=0x%08X, en_mask=0x%08X.\n", 
+							demData->sleep_time, 
+							demData->resources_used, 
+							demData->wakeup_reason, 
+							demData->pending_irqs, 
+							demData->irq_mask		);
+
+	for (i = 0; i < ARRAY_SIZE(str_reason); i++) {
+		if (demData->wakeup_reason & (1<<i)) {
+			if (i == 0) { /*SMD*/
+				if (!strcmp(demData->smd_port_name, "RPCCALL")) {
+					printk(KERN_INFO "wakeup reason = %s, port = %s, prog = 0x%x, proc = 0x%x\n", 
+						str_reason[i],
+						demData->smd_port_name,
+						demData->rpc_prog,
+						demData->rpc_proc);
+					continue;
+				}
+				printk(KERN_INFO "wakeup reason = %s, port = %s\n", 
+					str_reason[i],
+					demData->smd_port_name);
+				continue;
+			}
+			//MDT-Kernel-BH-AddGpioWakeupInfo-00+[
+			if (i == 2) { /*GPIO*/
+				printk(KERN_INFO "wakeup reason = %s, pin = %d\n", str_reason[i],demData->reserved2);
+				continue;
+			}
+			//MDT-Kernel-BH-AddGpioWakeupInfo-00+]
+			printk(KERN_INFO "wakeup reason = %s\n", str_reason[i]);
+		}
+	}
+
+	if (demData->wakeup_reason&0x80000000) {
+		printk(KERN_INFO "wakeup reason = early exit\n");
+	}
+}
+#endif /* CONFIG_FIH_MODEM_SUSPEND_LOG */
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
+
 /*
  * Power collapse the Apps processor.  This function executes the handshake
  * protocol with Modem.
@@ -866,9 +946,16 @@ static int msm_pm_power_collapse
 		(int)from_idle, sleep_delay, sleep_limit);
 
 	if (!(smsm_get_state(SMSM_POWER_MASTER_DEM) & DEM_MASTER_SMSM_READY)) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: master not ready\n", __func__);
+#else
 		MSM_PM_DPRINTK(
 			MSM_PM_DEBUG_SUSPEND | MSM_PM_DEBUG_POWER_COLLAPSE,
 			KERN_INFO, "%s(): master not ready\n", __func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		ret = -EBUSY;
 		goto power_collapse_bail;
 	}
@@ -920,11 +1007,18 @@ static int msm_pm_power_collapse
 	}
 
 	if (ret == 1) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: msm_pm_poll_state detected Modem reset\n",	__func__);
+#else
 		MSM_PM_DPRINTK(
 			MSM_PM_DEBUG_SUSPEND|MSM_PM_DEBUG_POWER_COLLAPSE,
 			KERN_INFO,
 			"%s(): msm_pm_poll_state detected Modem reset\n",
 			__func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		goto power_collapse_early_exit;
 	}
 
@@ -934,11 +1028,18 @@ static int msm_pm_power_collapse
 
 	ret = msm_pm_irq_extns->enter_sleep2(true, from_idle);
 	if (ret < 0) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: msm_irq_enter_sleep2 aborted, %d\n", __func__, ret);
+#else
 		MSM_PM_DPRINTK(
 			MSM_PM_DEBUG_SUSPEND|MSM_PM_DEBUG_POWER_COLLAPSE,
 			KERN_INFO,
 			"%s(): msm_irq_enter_sleep2 aborted, %d\n", __func__,
 			ret);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		goto power_collapse_early_exit;
 	}
 
@@ -946,11 +1047,24 @@ static int msm_pm_power_collapse
 	MSM_PM_DEBUG_PRINT_STATE("msm_pm_power_collapse(): pre power down");
 
 	saved_acpuclk_rate = acpuclk_power_collapse();
+/* FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+	if (unlikely(!from_idle))
+		printk(KERN_ERR	"%s: change clock rate (old rate = %lu)\n", __func__, saved_acpuclk_rate);
+	else
+#endif
+/* FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
 		"%s(): change clock rate (old rate = %lu)\n", __func__,
 		saved_acpuclk_rate);
 
 	if (saved_acpuclk_rate == 0) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: saved_acpuclk_rate == 0 aborted.\n", __func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		msm_pm_config_hw_after_power_up();
 		goto power_collapse_early_exit;
 	}
@@ -1011,9 +1125,16 @@ static int msm_pm_power_collapse
 		local_fiq_enable();
 	}
 
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+	if (unlikely(!from_idle))
+		printk(KERN_INFO "msm_pm_collapse returned %d\n", collapsed);
+#else
 	MSM_PM_DPRINTK(MSM_PM_DEBUG_SUSPEND | MSM_PM_DEBUG_POWER_COLLAPSE,
 		KERN_INFO,
 		"%s(): msm_pm_collapse returned %d\n", __func__, collapsed);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 
 	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
 		"%s(): restore clock rate to %lu\n", __func__,
@@ -1046,11 +1167,18 @@ static int msm_pm_power_collapse
 	}
 
 	if (ret == 1) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: msm_pm_poll_state detected Modem reset\n",	__func__);
+#else
 		MSM_PM_DPRINTK(
 			MSM_PM_DEBUG_SUSPEND|MSM_PM_DEBUG_POWER_COLLAPSE,
 			KERN_INFO,
 			"%s(): msm_pm_poll_state detected Modem reset\n",
 			__func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		goto power_collapse_early_exit;
 	}
 
@@ -1060,6 +1188,12 @@ static int msm_pm_power_collapse
 	} else {
 		BUG_ON(!(state_grps[0].value_read &
 			DEM_MASTER_SMSM_PWRC_EARLY_EXIT));
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: Sanity check fail\n", __func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		goto power_collapse_early_exit;
 	}
 
@@ -1086,11 +1220,18 @@ static int msm_pm_power_collapse
 	}
 
 	if (ret == 1) {
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+		if (unlikely(!from_idle))
+			printk(KERN_ERR	"%s: \n", __func__);
+#else
 		MSM_PM_DPRINTK(
 			MSM_PM_DEBUG_SUSPEND|MSM_PM_DEBUG_POWER_COLLAPSE,
 			KERN_INFO,
 			"%s(): msm_pm_poll_state detected Modem reset\n",
 			__func__);
+#endif
+/*FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 		ret = -EAGAIN;
 		goto power_collapse_restore_gpio_bail;
 	}
@@ -1099,6 +1240,14 @@ static int msm_pm_power_collapse
 
 	MSM_PM_DEBUG_PRINT_STATE("msm_pm_power_collapse(): WFPI RUN");
 	MSM_PM_DEBUG_PRINT_SLEEP_INFO();
+/* FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+[ */
+#ifdef CONFIG_FIH_MODEM_SUSPEND_LOG
+	if (unlikely(!from_idle))
+		show_wakeup_info(msm_pm_smem_data);
+	else if ((MSM_PM_DEBUG_POWER_COLLAPSE) & msm_pm_debug_mask)
+		show_smem_sleep_info();
+#endif
+/* FIH-SW3-KERNEL-PK-MODEM_SUSPEND_LOG-00+] */
 
 	msm_pm_irq_extns->exit_sleep2(msm_pm_smem_data->irq_mask,
 		msm_pm_smem_data->wakeup_reason,

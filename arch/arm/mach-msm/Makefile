@@ -96,8 +96,12 @@ obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging.o
 ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging_debug.o
 endif
+ifndef CONFIG_FIH_SEMC_S1
 # Skies-2012/06/01, Save AMSS log to /proc/last_radio_log [add last_radio_log.o]
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o smd_private.o last_radio_log.o
+else
+obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o smd_private.o
+endif
 # SoMC patch - Super Stamina Mode
 obj-$(CONFIG_SONY_SSM) += sony_ssm.o
 obj-y += socinfo.o
@@ -246,23 +250,46 @@ obj-$(CONFIG_TROUT_PWRSINK) += htc_pwrsink.o
 obj-$(CONFIG_ARCH_MSM7X27) += clock-pcom-lookup.o
 obj-$(CONFIG_MACH_MSM7X27_SURF) += board-msm7x27.o devices-msm7x27.o
 obj-$(CONFIG_MACH_MSM7X27_FFA) += board-msm7x27.o devices-msm7x27.o
+ifndef CONFIG_FIH_SEMC_S1
 obj-$(CONFIG_ARCH_MSM7X27A) += clock-pcom-lookup.o devices-msm7x27a.o
+else
+obj-$(CONFIG_ARCH_MSM7X27A) += clock-pcom-lookup.o
+endif
 board-7627a-all-objs += board-msm7627a-storage.o board-msm7627a-bt.o board-msm7627a-camera.o
 board-7627a-all-objs += audio-7627a-devices.o
 board-7627a-all-objs += board-msm7627a-display.o board-msm7627a-wlan.o board-msm7627a-io.o
+ifndef CONFIG_FIH_SEMC_S1
 obj-$(CONFIG_MACH_MSM7X27A_RUMI3) += board-msm7x27a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM7X27A_SURF) += board-msm7x27a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM7X27A_FFA) += board-msm7x27a.o board-7627a-all.o
+else
+obj-$(CONFIG_MACH_MSM7X27A_RUMI3) += board-7627a-all.o
+obj-$(CONFIG_MACH_MSM7X27A_SURF) += board-7627a-all.o
+obj-$(CONFIG_MACH_MSM7X27A_FFA) += board-7627a-all.o
+endif
+obj-$(CONFIG_FIH_MACH_TAMSUI_JLO) += board-tamsui-jlo.o devices-tamsui-jlo.o
 obj-$(CONFIG_MACH_MSM7627A_QRD1) += board-qrd7627a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM7627A_QRD3) += board-qrd7627a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM7627A_EVB) += board-qrd7627a.o board-7627a-all.o
+ifndef CONFIG_FIH_SEMC_S1
 obj-$(CONFIG_ARCH_MSM8625) += msm_smem_iface.o devices-msm7x27a.o clock-pcom-lookup.o mpm-8625.o
+else
+obj-$(CONFIG_ARCH_MSM8625) += msm_smem_iface.o clock-pcom-lookup.o mpm-8625.o
+endif
+ifndef CONFIG_FIH_SEMC_S1
 obj-$(CONFIG_MACH_MSM8625_RUMI3) += board-msm7x27a.o
 obj-$(CONFIG_MACH_MSM8625_SURF) +=  board-msm7x27a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM8625_EVB) +=  board-qrd7627a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM8625_QRD7) +=  board-qrd7627a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM8625_FFA) += board-msm7x27a.o board-7627a-all.o
 obj-$(CONFIG_MACH_MSM8625_EVT) += board-msm7x27a.o board-7627a-all.o
+else
+obj-$(CONFIG_MACH_MSM8625_SURF) +=  board-7627a-all.o
+obj-$(CONFIG_MACH_MSM8625_EVB) +=  board-7627a-all.o
+obj-$(CONFIG_MACH_MSM8625_QRD7) +=  board-7627a-all.o
+obj-$(CONFIG_MACH_MSM8625_FFA) += board-7627a-all.o
+obj-$(CONFIG_MACH_MSM8625_EVT) += board-7627a-all.o
+endif
 obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30.o devices-msm7x30.o memory_topology.o
 obj-$(CONFIG_ARCH_MSM7X30) += clock-local.o clock-7x30.o acpuclock-7x30.o clock-pll.o
 obj-$(CONFIG_MACH_MSM7X25_SURF) += board-msm7x27.o devices-msm7x25.o
@@ -377,6 +404,16 @@ obj-$(CONFIG_ARCH_MSM7X27A) += board-msm7x27a-regulator.o
 endif
 
 obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
+
+ifdef CONFIG_FIH_SEMC_S1
+# FIH-SW3-KERNEL-TH-porting_dbgcfgtool-00+
+obj-y += dbgcfgtool.o
+obj-$(CONFIG_FEATURE_FIH_SW3_LAST_ALOG) += alog_ram_console.o
+# FIH-SW3-KERNEL-TH-add_last_alog-00+
+# MTD-SW3-KERNEL-MP-RPC_Read_NV-00+
+obj-y += rpc_nv.o
+endif
+
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
 obj-$(CONFIG_MSM_EBI_ERP) += ebi_erp.o
@@ -392,3 +429,13 @@ obj-$(CONFIG_MSM_VP_REGULATOR) += msm_vp.o
 ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
+
+ifdef CONFIG_FIH_SEMC_S1
+#MTD-BSP-VT-INFO-00+[
+obj-y +=fih_proc_fs.o
+#MTD-BSP-VT-INFO-00+]
+# CONN-EC-WIFI-Porting-01+[
+obj-y += board-sisi-wifi.o
+# CONN-EC-WIFI-Porting-01+]
+endif
+

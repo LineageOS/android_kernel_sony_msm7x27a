@@ -61,6 +61,7 @@
 #include "pm-boot.h"
 #include "board-msm7627a.h"
 
+#ifndef CONFIG_FIH_SEMC_S1
 //Arima Edison add for sending boot_reason 20111122 ++
 #include "smd_private.h"
 //Arima Edison add for sending boot_reason 20111122 --
@@ -68,12 +69,15 @@
 //<<Skies-2012/10/16, implement ram console in JB
 #include <linux/persistent_ram.h>
 //>>Skies-2012/10/16, implement ram console in JB
-
+#endif
 
 #define PMEM_KERNEL_EBI1_SIZE	0x3A000
+#ifdef CONFIG_FIH_SEMC_S1
+#define MSM_PMEM_AUDIO_SIZE	0x1F4000
+#else
 //20130114-JordanChen , Reduce it due to Nanhu doesn't support LPA
-/*#define MSM_PMEM_AUDIO_SIZE	0x1F4000*/
 #define MSM_PMEM_AUDIO_SIZE	0x5B000
+#endif
 
 #if defined(CONFIG_GPIO_SX150X)
 enum {
@@ -161,21 +165,32 @@ static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
 }
 
 static struct msm_i2c_platform_data msm_gsbi0_qup_i2c_pdata = {
+#ifdef CONFIG_FIH_SEMC_S1
+	.clk_freq		= 100000,
+#else
 	.clk_freq		= 400000,
+#endif
 	.msm_i2c_config_gpio	= gsbi_qup_i2c_gpio_config,
 };
 
 static struct msm_i2c_platform_data msm_gsbi1_qup_i2c_pdata = {
+#ifdef CONFIG_FIH_SEMC_S1
+	.clk_freq		= 100000,
+#else
 	/*++ Huize - 20120224 Improve I2C transmit speed ++*/
 	.clk_freq		= 400000,
+#endif
 	.msm_i2c_config_gpio	= gsbi_qup_i2c_gpio_config,
 	/*-- Huize - 20120224 Improve I2C transmit speed --*/
 };
 
 #ifdef CONFIG_ARCH_MSM7X27A
+#ifdef CONFIG_FIH_SEMC_S1
+#define MSM_PMEM_MDP_SIZE       0x2300000
 //20130114-JordanChen , Reduce MDP size due to Nanhu supports HVGA resolution
-/*#define MSM_PMEM_MDP_SIZE       0x2300000*/
+#else
 #define MSM_PMEM_MDP_SIZE       0x1500000
+#endif
 #define MSM7x25A_MSM_PMEM_MDP_SIZE       0x1500000
 
 #define MSM_PMEM_ADSP_SIZE      0x1200000
@@ -625,7 +640,7 @@ static void msm7x27a_cfg_smsc911x(void)
 	}
 	gpio_set_value(ETH_FIFO_SEL_GPIO, 0);
 }
-
+#ifndef CONFIG_FIH_SEMC_S1
 /*<<Skies-2012/06/01, RAM console driver*/
 static struct resource ram_console_resource[] = {
 	{
@@ -656,6 +671,7 @@ static struct persistent_ram ram_console_ram = {
 	.descs = &ram_console_desc,
 };
 /*>>Skies-2012/06/01, RAM console driver*/
+#endif
 
 #if defined(CONFIG_SERIAL_MSM_HSL_CONSOLE) \
 		&& defined(CONFIG_MSM_SHARED_GPIO_FOR_UART2DM)
@@ -739,6 +755,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_adc_device,
 #ifdef CONFIG_ION_MSM
 	&ion_dev,
+#ifndef CONFIG_FIH_SEMC_S1
 	/*Skies-2012/06/01, RAM console driver*/
 	&ram_console_device,
 	//Edison add for RGB LED test ++
@@ -746,6 +763,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&green_led_pdev,
 	&blue_led_pdev,
 	//Edison add for RGB LED test --
+#endif
 #endif
 };
 
@@ -1102,7 +1120,7 @@ static void __init msm7x27a_init_regulators(void)
 		pr_err("%s: could not register regulator device: %d\n",
 				__func__, rc);
 }
-
+#ifndef CONFIG_FIH_SEMC_S1
 // << FerryWu, 2012/07/12, SoMC S1 boot integration
 #if defined(CONFIG_SEMC_S1)
 static int __init s1_boot_reason(char *str)
@@ -1113,6 +1131,7 @@ static int __init s1_boot_reason(char *str)
 early_param("startup", s1_boot_reason);
 #endif /* CONFIG_SEMC_S1 */
 // >> FerryWu, 2012/07/12, SoMC S1 boot integration
+#endif
 
 static void __init msm7x27a_add_footswitch_devices(void)
 {
@@ -1182,6 +1201,7 @@ static void __init msm7x27a_pm_init(void)
 
 static void __init msm7x2x_init(void)
 {
+#ifndef CONFIG_FIH_SEMC_S1
 	//Arima Edison add for sending boot_reason 20111122 ++
 	unsigned int smem_size;
 	//Arima Edison add for sending boot_reason 20111122 --
@@ -1198,7 +1218,7 @@ static void __init msm7x2x_init(void)
 	} while (smem_get_entry(SMEM_SMSM_SHARED_STATE, &smem_size) == NULL);
 	#endif /* CONFIG_SEMC_S1 */
 	// >> FerryWu, 2012/06/13, SoMC S1 boot integration
-
+#endif
 	msm7x2x_misc_init();
 
 	/* Initialize regulators first so that other devices can use them */
@@ -1222,8 +1242,12 @@ static void __init msm7x2x_init(void)
 	msm_fb_add_devices();
 	msm7x2x_init_host();
 	msm7x27a_pm_init();
+#ifdef CONFIG_FIH_SEMC_S1
+	register_i2c_devices();
+#else
 #if defined(CONFIG_I2C) && defined(CONFIG_GPIO_SX150X) /* 20120507-Jordan */
 	register_i2c_devices();
+#endif
 #endif
 #if defined(CONFIG_BT) && defined(CONFIG_MARIMBA_CORE)
 	msm7627a_bt_power_init();
@@ -1234,6 +1258,7 @@ static void __init msm7x2x_init(void)
 	msm7x25a_kgsl_3d0_init();
 	/*8x25 kgsl initializations*/
 	msm8x25_kgsl_3d0_init();
+#ifndef CONFIG_FIH_SEMC_S1
 	//Arima Edison add for sending boot_reason 20111122 ++
 	// << FerryWu, 2012/07/12, SoMC S1 boot integration
 	#if defined(CONFIG_SEMC_S1)
@@ -1251,14 +1276,17 @@ static void __init msm7x2x_init(void)
 	//Arima Edison add for sending boot_reason 20111122 --
 	#endif /* CONFIG_SEMC_S1 */
 	// >> FerryWu, 2012/07/12, SoMC S1 boot integration
+#endif
 }
 
 static void __init msm7x2x_init_early(void)
 {
 	msm_msm7627a_allocate_memory_regions();
+#ifndef CONFIG_FIH_SEMC_S1
 //<<Skies-2012/10/16, implement ram console in JB
 	persistent_ram_early_init(&ram_console_ram);
 //>>Skies-2012/10/16, implement ram console in JB
+#endif
 }
 
 MACHINE_START(MSM7X27A_RUMI3, "QCT MSM7x27a RUMI3")

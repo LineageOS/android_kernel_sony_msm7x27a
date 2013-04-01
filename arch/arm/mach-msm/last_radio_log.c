@@ -51,9 +51,12 @@ static struct file_operations last_radio_log_fops = {
 	.read = last_radio_log_read,
 	.llseek = default_llseek,
 };
-
+#ifdef CONFIG_FIH_SEMC_S1
+void msm_init_last_radio_log(struct module *owner)
+#else
 /*Skies-2012/10/08, modify for using++*/
 void msm_init_last_radio_log(struct module *owner, unsigned base)
+#endif
 {
 	struct proc_dir_entry *entry;
 
@@ -62,12 +65,8 @@ void msm_init_last_radio_log(struct module *owner, unsigned base)
 		return;
 	}
 
-#if 0
-/*Skies-2012/06/01, get correct smem rigion++*/
-	//radio_log_base = smem_item(SMEM_CLKREGIM_BSP, &radio_log_size);
-	radio_log_base = smem_get_entry(SMEM_ERR_CRASH_LOG, &radio_log_size);
-/*Skies-2012/06/01, get correct smem rigion--*/
-	
+#ifdef CONFIG_FIH_SEMC_S1
+	radio_log_base = smem_item(SMEM_CLKREGIM_BSP, &radio_log_size);
 	if (!radio_log_base) {
 		pr_err("%s: could not retrieve SMEM_CLKREGIM_BSP\n", __func__);
 		return;
@@ -82,7 +81,12 @@ void msm_init_last_radio_log(struct module *owner, unsigned base)
 		return;
 	}
 #endif
+
+#ifdef CONFIG_FIH_SEMC_S1
+	entry = create_proc_entry("last_radio_log", S_IFREG | S_IRUGO, NULL);
+#else
 	entry = create_proc_entry("last_amsslog", S_IFREG | S_IRUGO, NULL);
+#endif
 	if (!entry) {
 		pr_err("%s: could not create proc entry for radio log\n",
 				__func__);

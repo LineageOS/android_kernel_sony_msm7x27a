@@ -25,7 +25,7 @@ enum {
 	/* SURF expander */
 	GPIO_CORE_EXPANDER_BASE = GPIO_EXPANDER_GPIO_BASE,
 	//+ murphy 2011.09.19
-	#if 1
+	#ifndef CONFIG_FIH_SEMC_S1
 	GPIO_BT_SYS_REST_EN     = 12,
 	GPIO_WLAN_EXT_POR_N     = GPIO_CORE_EXPANDER_BASE + 1,
 	#else
@@ -34,7 +34,11 @@ enum {
 	#endif
 	//- murphy 2011.09.19
 	GPIO_DISPLAY_PWR_EN,
+#ifdef CONFIG_FIH_SEMC_S1
+	GPIO_BACKLIGHT_EN,
+#else
 	GPIO_BACKLIGHT_EN_, // Arima modification
+#endif
 	GPIO_PRESSURE_XCLR,
 	GPIO_VREG_S3_EXP,
 	GPIO_UBM2M_PWRDWN,

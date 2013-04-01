@@ -37,12 +37,14 @@ static struct snd_endpoint snd_endpoints_list[] = {
 	SND(CURRENT, 0x7FFFFFFE),
 	SND(FM_ANALOG_STEREO_HEADSET, 35),
 	SND(FM_ANALOG_STEREO_HEADSET_CODEC, 36),
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120320 To fix audio path can't change when plug in headphone during a call ++*/
 	SND(NO_MIC_HEADSET, 3),		/* Headphone's adie config is different form headset */
 	/*-- Kevin Shiu - 20120320 To fix audio path can't change when plug in headphone during a call --*/
 	/*++ Kevin Shiu - 20120710 implement HAC feature ++*/
 	SND(HANDSET_HAC, 37),
 	/*-- Kevin Shiu - 20120710 implement HAC feature --*/
+#endif
 };
 #undef SND
 

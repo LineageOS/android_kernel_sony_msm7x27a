@@ -21,8 +21,15 @@
 #include "devices-msm7x2xa.h"
 #include "timer.h"
 
+#ifdef CONFIG_FIH_SEMC_S1
+#define GPIO_WLAN_3V3_EN 119
+#else
 #define GPIO_WLAN_3V3_EN 118
+#endif
 static const char *id = "WLAN";
+#ifdef CONFIG_FIH_SEMC_S1
+static bool wlan_powered_up;
+#endif
 
 enum {
 	WLAN_VREG_S3 = 0,
@@ -45,9 +52,13 @@ static struct wlan_vreg_info vreg_info[] = {
 	{"wlan4",     1800000, 1800000, 23, 1, NULL}
 };
 
+#ifdef CONFIG_FIH_SEMC_S1
+int gpio_wlan_sys_rest_en = 134;
+#else
 /*++ Huize - 20120927 Modify 134 to 124 by FelexChing ++*/
 int gpio_wlan_sys_rest_en = 124;
 /*-- Huize - 20120927 Modify 134 to 124 by FelexChing --*/
+#endif
 static void gpio_wlan_config(void)
 {
 	if (machine_is_msm7627a_qrd1() || machine_is_msm7627a_evb()
@@ -200,6 +211,12 @@ static unsigned int msm_AR600X_setup_power(bool on)
 {
 	int rc = 0;
 	static bool init_done;
+#ifdef CONFIG_FIH_SEMC_S1
+	if (wlan_powered_up) {
+		pr_info("WLAN already powered up\n");
+		return 0;
+	}
+#endif
 
 	if (unlikely(!init_done)) {
 		gpio_wlan_config();
@@ -293,6 +310,9 @@ static unsigned int msm_AR600X_setup_power(bool on)
 	}
 
 	pr_info("WLAN power-up success\n");
+#ifdef CONFIG_FIH_SEMC_S1
+	wlan_powered_up = true;
+#endif
 	return 0;
 set_clock_fail:
 	setup_wlan_clock(0);
@@ -310,12 +330,21 @@ reg_disable:
 	wlan_switch_regulators(0);
 out:
 	pr_info("WLAN power-up failed\n");
+#ifdef CONFIG_FIH_SEMC_S1
+	wlan_powered_up = false;
+#endif
 	return rc;
 }
 
 static unsigned int msm_AR600X_shutdown_power(bool on)
 {
 	int rc = 0;
+#ifdef CONFIG_FIH_SEMC_S1
+	if (!wlan_powered_up) {
+		pr_info("WLAN is not powered up, returning success\n");
+		return 0;
+	}
+#endif
 
 	/* Disable the A0 clock */
 	rc = setup_wlan_clock(on);
@@ -354,6 +383,12 @@ static unsigned int msm_AR600X_shutdown_power(bool on)
 		}
 		gpio_set_value(gpio_wlan_sys_rest_en, 0);
 #else
+#ifdef CONFIG_FIH_SEMC_S1
+		rc = setup_wlan_gpio(on);
+		if (rc) {
+			pr_err("%s: setup_wlan_gpio = %d\n", __func__, rc);
+			goto set_gpio_fail;
+#else
 		rc = gpio_request(gpio_wlan_sys_rest_en, "WLAN_DEEP_SLEEP_N");
 		if (!rc) {
 			rc = setup_wlan_gpio(on);
@@ -367,7 +402,11 @@ static unsigned int msm_AR600X_shutdown_power(bool on)
 			pr_err("%s: WLAN sys_rest_en GPIO %d request failed %d\n",
 				__func__, gpio_wlan_sys_rest_en, rc);
 			goto out;
+#endif
 		}
+#ifdef CONFIG_FIH_SEMC_S1
+		gpio_free(gpio_wlan_sys_rest_en);
+#endif
 #endif
 	}
 
@@ -390,6 +429,9 @@ static unsigned int msm_AR600X_shutdown_power(bool on)
 			__func__, rc);
 		goto reg_disable;
 	}
+#ifdef CONFIG_FIH_SEMC_S1
+	wlan_powered_up = false;
+#endif
 
 	pr_info("WLAN power-down success\n");
 	return 0;
@@ -400,7 +442,14 @@ set_gpio_fail:
 	setup_wlan_gpio(0);
 #endif
 gpio_fail:
+#ifdef CONFIG_FIH_SEMC_S1
+	if (!(machine_is_msm7627a_qrd1() || machine_is_msm7627a_evb() ||
+	    machine_is_msm8625_evb() || machine_is_msm8625_evt() ||
+	    machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7()))
+			gpio_free(gpio_wlan_sys_rest_en);
+#else
 	gpio_free(gpio_wlan_sys_rest_en);
+#endif
 qrd_gpio_fail:
 	/* GPIO_WLAN_3V3_EN is only required for the QRD7627a */
 	if (machine_is_msm7627a_qrd1())

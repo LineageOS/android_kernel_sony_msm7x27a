@@ -964,6 +964,7 @@ struct platform_device led_pdev = {
 	},
 };
 
+#ifndef CONFIG_FIH_SEMC_S1
 #ifdef CONFIG_LEDS_ARIMA_GPIO
 //<<SKIES 2011/10/19, button-backlight
 static struct led_info arima_btbl_gpio_led_pdata = {
@@ -1031,6 +1032,7 @@ struct platform_device blue_led_pdev = {
 	},
 };
 //Edison add RGB LED test --
+#endif
 
 struct platform_device asoc_msm_pcm = {
 	.name   = "msm-dsp-audio",
@@ -1715,12 +1717,22 @@ static struct resource cpr_resources[] = {
  * These are various Vdd levels supported by PMIC
  */
 static uint32_t msm_c2_pmic_mv[] __initdata = {
+#ifdef CONFIG_FIH_SEMC_S1
+	1350000, 1337500, 1325000, 1312500, 1300000,
+	1287500, 1275000, 1262500, 1250000, 1237500,
+	1225000, 1212500, 1200000, 1187500, 1175000,
+	1162500, 1150000, 1137500, 1125000, 1112500,
+	1100000, 1087500, 1075000, 1062500, 0,
+	0,	 0,	  0,	   0,	    0,
+	0, 1050000,
+#else
 	1300000, 1287500, 1275000, 1262500, 1250000,
 	1237500, 1225000, 1212500, 1200000, 1187500,
 	1175000, 1162500, 1150000, 1137500, 1125000,
 	1112500, 1100000, 1087500, 1075000, 1062500,
 	1050000, 1037500, 1025000, 1012500, 0, 0, 0,
 	0, 0, 0, 0, 1000,
+#endif
 };
 
 /**
@@ -1760,9 +1772,15 @@ static struct msm_cpr_mode msm_cpr_mode_data[] = {
 			.step_quot = ~0,
 			.tgt_volt_offset = 0,
 			.turbo_Vmax = 1350000,
+#ifdef CONFIG_FIH_SEMC_S1
+			.turbo_Vmin = 1150000,
+			.nom_Vmax = 1350000,
+			.nom_Vmin = 1150000,
+#else
 			.turbo_Vmin = 1100000,
 			.nom_Vmax = 1350000,
 			.nom_Vmin = 1100000,
+#endif
 			.calibrated_uV = 1300000,
 	},
 };
@@ -1870,6 +1888,22 @@ static void __init msm_cpr_init(void)
 	 * enough to represent the value of maximum quot
 	 */
 	msm_cpr_pdata.max_quot = cpr_info->turbo_quot * 10 + 600;
+	/**
+	 * Fused Quot value for 1.2GHz on a 1.2GHz part is lower than
+	 * the quot value calculated using the scaling factor formula for
+	 * 1.2GHz when running on a 1.4GHz part. So, prop up the Quot for
+	 * a 1.2GHz part by a chip characterization recommended value.
+	 * Ditto for a 1.0GHz part.
+	 */
+	if (msm8625_cpu_id() == MSM8625A) {
+		msm_cpr_pdata.max_quot += 100;
+		if (msm_cpr_pdata.max_quot > 1400)
+			msm_cpr_pdata.max_quot = 1400;
+	} else if (msm8625_cpu_id() == MSM8625) {
+		msm_cpr_pdata.max_quot += 120;
+		if (msm_cpr_pdata.max_quot > 1350)
+			msm_cpr_pdata.max_quot = 1350;
+	}
 
 	/**
 	 * Bits 4:0 of pvs_fuse provide mapping to the safe boot up voltage.
@@ -1878,10 +1912,29 @@ static void __init msm_cpr_init(void)
 	msm_cpr_mode_data[TURBO_MODE].calibrated_uV =
 				msm_c2_pmic_mv[cpr_info->pvs_fuse & 0x1F];
 
+	if ((cpr_info->floor_fuse & 0x3) == 0x0) {
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmin = 1000000;
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
+	} else if ((cpr_info->floor_fuse & 0x3) == 0x1) {
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmin = 1050000;
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
+	} else if ((cpr_info->floor_fuse & 0x3) == 0x2) {
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmin = 1100000;
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
+	}
+
+	/* Temporary change until devices have their floor_fuse bits blown */
+	msm_cpr_mode_data[TURBO_MODE].nom_Vmin = 1100000;
+	msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
+
 	pr_debug("%s: cpr: ring_osc: 0x%x\n", __func__,
 		msm_cpr_mode_data[TURBO_MODE].ring_osc);
 	pr_debug("%s: cpr: turbo_quot: 0x%x\n", __func__, cpr_info->turbo_quot);
 	pr_debug("%s: cpr: pvs_fuse: 0x%x\n", __func__, cpr_info->pvs_fuse);
+	pr_debug("%s: cpr: floor_fuse: 0x%x\n", __func__, cpr_info->floor_fuse);
+	pr_debug("%s: cpr: nom_Vmin: %d, turbo_Vmin: %d\n", __func__,
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmin,
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin);
 	kfree(cpr_info);
 
 	if (msm8625_cpu_id() == MSM8625A)

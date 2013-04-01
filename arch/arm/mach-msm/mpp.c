@@ -43,7 +43,7 @@ int mpp_config_digital_in(unsigned mpp, unsigned config)
 	return err;
 }
 EXPORT_SYMBOL(mpp_config_digital_in);
-
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Huize - 20120329 Add for button backlight is controlled by mpp ++*/
 int mpp_config_i_sink(unsigned mpp, unsigned config)
 {
@@ -56,6 +56,7 @@ int mpp_config_i_sink(unsigned mpp, unsigned config)
 }
 EXPORT_SYMBOL(mpp_config_i_sink);
 /*-- Huize - 20120329 Add for button backlight is controlled by mpp --*/
+#endif
 
 #if defined(CONFIG_DEBUG_FS)
 static int test_result;

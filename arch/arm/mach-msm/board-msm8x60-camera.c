@@ -324,7 +324,11 @@ static struct msm_bus_vectors cam_stereo_snapshot_vectors[] = {
 static struct msm_bus_paths cam_bus_client_config[] = {
 	{
 		ARRAY_SIZE(cam_init_vectors),
+#ifdef CONFIG_FIH_SEMC_S1
+		cam_init_vectors,
+#else
 		cam_zsl_vectors,
+#endif
 	},
 	{
 		ARRAY_SIZE(cam_preview_vectors),
@@ -364,7 +368,11 @@ static struct msm_camera_device_platform_data msm_camera_csi_device_data[] = {
 		.is_vpe    = 1,
 		.cam_bus_scale_table = &cam_bus_client_pdata,
 		.ioclk = {
+#ifdef CONFIG_FIH_SEMC_S1
+			.vfe_clk_rate =	266667000,
+#else
 			.vfe_clk_rate =	228570000,
+#endif
 		},
 	},
 	{

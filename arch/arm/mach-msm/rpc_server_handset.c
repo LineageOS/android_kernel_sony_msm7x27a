@@ -75,9 +75,11 @@ enum hs_event {
 	HS_EVNT_REM,		/* Events received from HS counterpart on a
 				remote processor*/
 	HS_EVNT_DIAG,		/* Diag Events  */
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	HS_EVNT_ACCESSORY_DETECT,
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
+#endif
 	HS_EVNT_LAST,		 /* Should always be the last event type */
 	HS_EVNT_MAX		/* Force enum to be an 32-bit number */
 };
@@ -200,15 +202,21 @@ static const uint32_t hs_key_map[] = {
 	/*++ Kevin Shiu - 20121022 support 4-key Headset ++*/
 	KEY(HS_HEADSET_SWITCH_2_K, KEY_VOLUMEUP),
 	KEY(HS_HEADSET_SWITCH_3_K, KEY_VOLUMEDOWN),
+#ifndef CONFIG_FIH_SEMC_S1
 	KEY(HS_HEADSET_SWITCH_4_K, BTN_3),
 	/*-- Kevin Shiu - 20121022 support 4-key Headset --*/
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	KEY(HS_ACCESSORY_DETECT_K, HS_ACCESSORY_DETECT_K),
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
+#endif
 	0
 };
 
 enum {
+#ifdef CONFIG_FIH_SEMC_S1
+	NO_DEVICE	= 0,
+	MSM_HEADSET	= 1,
+#else
 	NO_DEVICE	= 0x0,
 	MSM_HEADSET	= 0x1,
 	/*++ Kevin Shiu - 20120316 To fix no sound when plug in headphone during music ++*/
@@ -217,6 +225,7 @@ enum {
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	UNKNOWN = 0x08,
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
+#endif
 };
 /* Add newer versions at the top of array */
 static const unsigned int rpc_vers[] = {
@@ -237,14 +246,20 @@ static struct hs_subs_rpc_req *hs_subs_req;
 
 struct msm_handset {
 	struct input_dev *ipdev;
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20121107 report live key ++*/
 	struct input_dev *appkey_dev;
 	/*-- Kevin Shiu - 20121107 report live key --*/
+#endif
 	struct switch_dev sdev;
 	struct msm_handset_platform_data *hs_pdata;
+#ifdef CONFIG_FIH_SEMC_S1
+	bool mic_on, hs_on;
+#else
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	bool mic_on, hs_on, type;
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
+#endif
 };
 
 static struct msm_rpc_client *rpc_client;
@@ -266,10 +281,14 @@ static int hs_find_key(uint32_t hscode)
 static void update_state(void)
 {
 	int state;
+
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	if(hs->type == 0)
 		state = 1 << 3;
-	else if (hs->mic_on && hs->hs_on)
+	else
+#endif
+	if (hs->mic_on && hs->hs_on)
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
 		state = 1 << 0;
 	else if (hs->hs_on)
@@ -314,6 +333,9 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 	/*++ Kevin Shiu - 20121022 support 4-key Headset ++*/
 	case KEY_VOLUMEUP:
 	case KEY_VOLUMEDOWN:
+#ifdef CONFIG_FIH_SEMC_S1
+		input_report_key(hs->ipdev, key, (key_code != HS_REL_K));
+#else
 	case BTN_3:
 	/*-- Kevin Shiu - 20121022 support 4-key Headset --*/
 		/*++ Kevin Shiu - 20121107 report live key ++*/
@@ -323,6 +345,7 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 			input_report_key(hs->ipdev, key, (key_code != HS_REL_K));
 		/*-- Kevin Shiu - 20121107 report live key --*/
 		printk(KERN_ERR "Kevin Shiu key=%d key_code=%d",key, key_code);
+#endif
 		break;
 	/*++ Kevin Shiu - 20111128 Detect Microphone/Hook key of Headset ++*/ 
 	case SW_HEADPHONE_INSERT_W_MIC:
@@ -331,15 +354,23 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 							hs->hs_on);
 		input_report_switch(hs->ipdev, SW_MICROPHONE_INSERT,
 							hs->mic_on);
+#ifdef CONFIG_FIH_SEMC_S1
+		update_state();
+#else
 		/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 		hs->type = 1;
 		/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
 		update_state();
 		printk(KERN_ERR "Kevin Shiu SW_HEADPHONE_INSERT_W_MIC hs_on =%d mic_on =%d",hs->hs_on, hs->mic_on);
+#endif
 		break;
 
 	case SW_HEADPHONE_INSERT:
 		hs->hs_on = (key_code != HS_REL_K) ? 1 : 0;
+#ifdef CONFIG_FIH_SEMC_S1
+		input_report_switch(hs->ipdev, key, hs->hs_on);
+		update_state();
+#else
 		input_report_switch(hs->ipdev, SW_HEADPHONE_INSERT,
 							hs->hs_on);
 		hs->mic_on = 0;
@@ -350,11 +381,15 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 		/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
 		update_state();
 		printk(KERN_ERR "Kevin Shiu SW_HEADPHONE_INSERT hs_on =%d mic_on =%d ",hs->hs_on,hs->mic_on);
+#endif
 		break;
 	/*-- Kevin Shiu - 20111128 Detect Microphone/Hook key of Headset --*/ 
 	case SW_MICROPHONE_INSERT:
 		hs->mic_on = (key_code != HS_REL_K) ? 1 : 0;
 		input_report_switch(hs->ipdev, key, hs->mic_on);
+#ifdef CONFIG_FIH_SEMC_S1
+		update_state();
+#else
 		/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 		hs->type = 1;
 		/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
@@ -371,6 +406,7 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 		hs->type = (key_code != HS_REL_K) ? 0 : 1;
 		update_state();
 		printk(KERN_ERR "Kevin Shiu It doesn't support non-CTIA headset");
+#endif
 		break;
 		/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
 	case -1:
@@ -378,13 +414,16 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
 				 __func__, temp_key_code);
 		return;
 	}
-	
+#ifdef CONFIG_FIH_SEMC_S1
+	input_sync(hs->ipdev);
+#else
 	/*++ Kevin Shiu - 20121107 report live key ++*/
 	if(key == BTN_3)
 		input_sync(hs->appkey_dev);
 	else
 		input_sync(hs->ipdev);
 	/*-- Kevin Shiu - 20121107 report live key --*/
+#endif
 }
 
 static int handle_hs_rpc_call(struct msm_rpc_server *server,
@@ -459,10 +498,15 @@ static int hs_rpc_report_event_arg(struct msm_rpc_client *client,
 
 	req->hs_event_data_ptr	= cpu_to_be32(0x1);
 	req->data.ver		= cpu_to_be32(HS_EVENT_DATA_VER);
+#ifdef CONFIG_FIH_SEMC_S1
+	req->data.event_type	= cpu_to_be32(HS_EVNT_HSD);
+	req->data.enum_disc	= cpu_to_be32(HS_EVNT_HSD);
+#else
 	/*++ Kevin Shiu - 20120510 support 3-key Headset ++*/
 	req->data.event_type	= cpu_to_be32(HS_EVNT_ACCESSORY_DETECT);
 	req->data.enum_disc	= cpu_to_be32(HS_EVNT_ACCESSORY_DETECT);
 	/*-- Kevin Shiu - 20120510 support 3-key Headset --*/
+#endif
 	req->data.data_length	= cpu_to_be32(0x1);
 	req->data.data		= cpu_to_be32(*(enum hs_src_state *)data);
 	req->data.data_size	= cpu_to_be32(sizeof(enum hs_src_state));
@@ -669,14 +713,18 @@ static ssize_t msm_headset_print_name(struct switch_dev *sdev, char *buf)
 	case NO_DEVICE:
 		return sprintf(buf, "No Device\n");
 	case MSM_HEADSET:
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120316 To fix no sound when plug in headphone during music ++*/
 	case MSM_HEADPHONE:
 	/*-- Kevin Shiu - 20120316 To fix no sound when plug in headphone during music --*/
+#endif
 		return sprintf(buf, "Headset\n");
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120510 recognize non-CTIA Headset ++*/
 	case UNKNOWN:
 		return sprintf(buf, "UNKNOWN\n");
 	/*-- Kevin Shiu - 20120510 recognize non-CTIA Headset --*/
+#endif
 	}
 	return -EINVAL;
 }
@@ -685,10 +733,12 @@ static int __devinit hs_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct input_dev *ipdev;
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20121107 report live key ++*/
 	struct input_dev *app_dev;
 	/*-- Kevin Shiu - 20121107 report live key --*/
-	
+#endif
+
 	hs = kzalloc(sizeof(struct msm_handset), GFP_KERNEL);
 	if (!hs)
 		return -ENOMEM;
@@ -725,8 +775,10 @@ static int __devinit hs_probe(struct platform_device *pdev)
 	/*++ Kevin Shiu - 20121022 support 4-key Headset ++*/
 	input_set_capability(ipdev, EV_KEY, KEY_VOLUMEUP);
 	input_set_capability(ipdev, EV_KEY, KEY_VOLUMEDOWN);
+#ifndef CONFIG_FIH_SEMC_S1
 	input_set_capability(ipdev, EV_KEY, BTN_3);
 	/*-- Kevin Shiu - 20121022 support 4-key Headset --*/
+#endif
 	input_set_capability(ipdev, EV_SW, SW_HEADPHONE_INSERT);
 	input_set_capability(ipdev, EV_SW, SW_MICROPHONE_INSERT);
 	input_set_capability(ipdev, EV_KEY, KEY_POWER);
@@ -739,6 +791,7 @@ static int __devinit hs_probe(struct platform_device *pdev)
 		goto err_reg_input_dev;
 	}
 
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20121107 report live key ++*/
 	app_dev = input_allocate_device();
 	if (!app_dev) {
@@ -760,7 +813,7 @@ static int __devinit hs_probe(struct platform_device *pdev)
 		goto err_reg_input_app_dev;
 	}
 	/*-- Kevin Shiu - 20121107 report live key --*/
-	
+#endif
 	platform_set_drvdata(pdev, hs);
 
 	rc = hs_rpc_init();
@@ -774,11 +827,13 @@ static int __devinit hs_probe(struct platform_device *pdev)
 err_hs_rpc_init:
 	input_unregister_device(ipdev);
 	ipdev = NULL;
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20121107 report live key ++*/
 err_reg_input_app_dev:
 	input_free_device(app_dev);
 err_alloc_input_app_dev:
 /*-- Kevin Shiu - 20121107 report live key --*/
+#endif
 err_reg_input_dev:
 	input_free_device(ipdev);
 err_alloc_input_dev:

@@ -86,6 +86,7 @@ struct msm_cpr {
 	uint32_t cur_Vmax;
 	uint32_t prev_volt_uV;
 	struct mutex cpr_mutex;
+	spinlock_t cpr_lock;
 	struct regulator *vreg_cx;
 	const struct msm_cpr_config *config;
 	struct notifier_block freq_transition;
@@ -154,17 +155,17 @@ static void cpr_regs_dump_all(struct msm_cpr *cpr)
 /* Enable the CPR H/W Block */
 static void cpr_enable(struct msm_cpr *cpr)
 {
-	mutex_lock(&cpr->cpr_mutex);
+	spin_lock(&cpr->cpr_lock);
 	cpr_modify_reg(cpr, RBCPR_CTL, LOOP_EN_M, ENABLE_CPR);
-	mutex_unlock(&cpr->cpr_mutex);
+	spin_unlock(&cpr->cpr_lock);
 }
 
 /* Disable the CPR H/W Block */
 static void cpr_disable(struct msm_cpr *cpr)
 {
-	mutex_lock(&cpr->cpr_mutex);
+	spin_lock(&cpr->cpr_lock);
 	cpr_modify_reg(cpr, RBCPR_CTL, LOOP_EN_M, DISABLE_CPR);
-	mutex_unlock(&cpr->cpr_mutex);
+	spin_unlock(&cpr->cpr_lock);
 }
 
 static int32_t cpr_poll_result(struct msm_cpr *cpr)
@@ -525,6 +526,10 @@ static void cpr_set_vdd(struct msm_cpr *cpr, enum cpr_action action)
 		 */
 		error_step -= 2;
 
+		/* Keep down step upto two per interrupt to avoid any spike */
+		if (error_step > 2)
+			error_step = 2;
+
 		/* Calculte new PMIC voltage */
 		new_volt = curr_volt - (error_step * cpr->vp->step_size);
 		msm_cpr_debug(MSM_CPR_DEBUG_STEPS,
@@ -642,6 +647,11 @@ static void cpr_config(struct msm_cpr *cpr)
 					cpr->config->delay_us);
 	cpr_write_reg(cpr, RBCPR_TIMER_INTERVAL, delay_count);
 
+	/* Use Consecutive Down to avoid any interrupt due to spike */
+	cpr_write_reg(cpr, RBIF_TIMER_ADJUST, (0x2 << RBIF_CONS_DN_SHIFT));
+	msm_cpr_debug(MSM_CPR_DEBUG_CONFIG, "RBIF_TIMER_ADJUST: 0x%x\n",
+		readl_relaxed(cpr->base + RBIF_TIMER_ADJUST));
+
 	/* Enable the Timer */
 	cpr_modify_reg(cpr, RBCPR_CTL, TIMER_M, ENABLE_TIMER);
 
@@ -743,6 +753,9 @@ cpr_freq_transition(struct notifier_block *nb, unsigned long val,
 			"RBIF_IRQ_STATUS: 0x%x\n",
 			cpr_read_reg(cpr, RBIF_IRQ_STATUS));
 
+		/* Clear all the interrupts */
+		cpr_write_reg(cpr, RBIF_IRQ_CLEAR, ALL_CPR_IRQ);
+
 		cpr_enable(cpr);
 		break;
 	default:
@@ -776,6 +789,9 @@ static int msm_cpr_resume(void)
 	cpr_write_reg(cpr, RBCPR_CTL,
 		cpr_save_state.rbcpr_ctl);
 
+	/* Clear all the interrupts */
+	cpr_write_reg(cpr, RBIF_IRQ_CLEAR, ALL_CPR_IRQ);
+
 	enable_irq(cpr->irq);
 	cpr_enable(cpr);
 
@@ -790,6 +806,9 @@ static int msm_cpr_suspend(void)
 	/* Disable CPR measurement before IRQ to avoid pending interrupts */
 	cpr_disable(cpr);
 	disable_irq(cpr->irq);
+
+	/* Clear all the interrupts */
+	cpr_write_reg(cpr, RBIF_IRQ_CLEAR, ALL_CPR_IRQ);
 
 	cpr_save_state.rbif_timer_interval =
 		cpr_read_reg(cpr, RBCPR_TIMER_INTERVAL);
@@ -925,7 +944,7 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 
 	cpr->vp = pdata->vp_data;
 
-	mutex_init(&cpr->cpr_mutex);
+	spin_lock_init(&cpr->cpr_lock);
 
 	/* Initialize the Voltage domain for CPR */
 	cpr->vreg_cx = regulator_get(&pdev->dev, "vddx_cx");
@@ -1010,7 +1029,6 @@ static int __devexit msm_cpr_remove(struct platform_device *pdev)
 	regulator_put(cpr->vreg_cx);
 	free_irq(cpr->irq, cpr);
 	iounmap(cpr->base);
-	mutex_destroy(&cpr->cpr_mutex);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;

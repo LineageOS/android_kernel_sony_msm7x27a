@@ -54,12 +54,14 @@ static struct snd_ctxt the_snd;
 
 #define SND_SET_DEVICE_PROC 2
 #define SND_SET_VOLUME_PROC 3
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20120612 implement secondary mic test ++*/
 #define SND_SET_INFO_PROC 42
 /*-- Kevin Shiu - 20120612 implement secondary mic test --*/
 /*++ Kvein Shiu - 20121103 always enable hesd bias when TTY turn on ++*/
 #define SND_SET_TTY_PROC 43
 /*-- Kvein Shiu - 20121103 always enable hesd bias when TTY turn on --*/
+#endif
 #define SND_AVC_CTL_PROC 29
 #define SND_AGC_CTL_PROC 30
 
@@ -80,6 +82,7 @@ struct rpc_snd_set_volume_args {
 	uint32_t cb_func;
 	uint32_t client_data;
 };
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20130116 implement mic test  ++*/
 struct rpc_snd_set_info_args {
 	uint32_t secondary_mic;
@@ -96,6 +99,8 @@ struct rpc_snd_set_tty_args {
 	uint32_t client_data;
 };
 /*-- Kvein Shiu - 20121103 always enable hesd bias when TTY turn on --*/
+#endif
+
 struct rpc_snd_avc_ctl_args {
 	uint32_t avc_ctl;
 	uint32_t cb_func;
@@ -112,6 +117,7 @@ struct snd_set_device_msg {
 	struct rpc_request_hdr hdr;
 	struct rpc_snd_set_device_args args;
 };
+#ifndef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20120612 implement secondary mic test ++*/
 struct snd_set_info_msg {
 	struct rpc_request_hdr hdr;
@@ -124,6 +130,8 @@ struct snd_set_tty_msg {
 	struct rpc_snd_set_tty_args args;
 };
 /*-- Kvein Shiu - 20121103 always enable hesd bias when TTY turn on --*/
+#endif
+
 struct snd_set_volume_msg {
 	struct rpc_request_hdr hdr;
 	struct rpc_snd_set_volume_args args;
@@ -185,6 +193,7 @@ static long snd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	struct msm_snd_device_config dev;
 	struct msm_snd_volume_config vol;
+#ifndef CONFIG_FIH_SEMC_S1
 	/*++ Kevin Shiu - 20120612 implement secondary mic test ++*/
 	struct msm_snd_info_config info;
 	struct snd_set_info_msg imsg;
@@ -193,6 +202,7 @@ static long snd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct msm_snd_tty_config tty;
 	struct snd_set_tty_msg ttymsg;
 	/*-- Kvein Shiu - 20121103 always enable hesd bias when TTY turn on --*/
+#endif
 	
 	struct snd_ctxt *snd = file->private_data;
 	int rc = 0;
@@ -305,6 +315,7 @@ static long snd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SND_GET_ENDPOINT:
 		rc = get_endpoint(snd, arg);
 		break;
+#ifdef CONFIG_FIH_SEMC_S1
 /*++ Kevin Shiu - 20130116 implement mic test  ++*/
 	case SND_SET_INFO:
 		if (copy_from_user(&info, (void __user *) arg, sizeof(info))) {
@@ -345,6 +356,7 @@ static long snd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			sizeof(ttymsg), 5 * HZ);
 		break;
 /*-- Kvein Shiu - 20121103 always enable hesd bias when TTY turn on --*/	
+#endif
 	default:
 		MM_ERR("unknown command\n");
 		rc = -EINVAL;

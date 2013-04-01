@@ -28,9 +28,11 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#ifndef CONFIG_FIH_SEMC_S1
 /* Integrate CRs-Fixed: 419695 , 20121219 */
 #include <linux/reboot.h>
 /* Integrate CRs-Fixed: 419695 , 20121219 */
+#endif
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <mach/msm_rpcrouter.h>
@@ -119,9 +121,11 @@ static void rmt_storage_sdio_smem_work(struct work_struct *work);
 #endif
 
 static struct rmt_storage_client_info *rmc;
+#ifndef CONFIG_FIH_SEMC_S1
 /* Integrate CRs-Fixed: 419695 , 20121219 */
 struct rmt_storage_srv *rmt_srv;
 /* Integrate CRs-Fixed: 419695 , 20121219 */
+#endif
 
 #ifdef CONFIG_MSM_SDIO_SMEM
 DECLARE_DELAYED_WORK(sdio_smem_work, rmt_storage_sdio_smem_work);
@@ -1354,6 +1358,7 @@ show_sync_sts(struct device *dev, struct device_attribute *attr, char *buf)
 			rmt_storage_get_sync_status(srv->rpc_client));
 }
 
+#ifndef CONFIG_FIH_SEMC_S1
 /* Integrate CRs-Fixed: 419695 , 20121219 */
 /*
  * Initiate the remote storage force sync and wait until
@@ -1407,6 +1412,7 @@ static struct notifier_block rmt_storage_reboot_notifier = {
 	.priority = INT_MAX,
 };
 /* Integrate CRs-Fixed: 419695 , 20121219 */
+#endif
 
 static int rmt_storage_init_ramfs(struct rmt_storage_srv *srv)
 {
@@ -1585,11 +1591,13 @@ static int rmt_storage_probe(struct platform_device *pdev)
 	int ret;
 
 	dev = container_of(pdev, struct rpcsvr_platform_device, base);
-
+#ifndef CONFIG_FIH_SEMC_S1
 /* Integrate CRs-Fixed: 419695 , 20121219 */
 	rmt_srv = srv = rmt_storage_get_srv(dev->prog);
 /* Integrate CRs-Fixed: 419695 , 20121219 */
-
+#else
+	srv = rmt_storage_get_srv(dev->prog);
+#endif
 	if (!srv) {
 		pr_err("%s: Invalid prog = %#x\n", __func__, dev->prog);
 		return -ENXIO;
@@ -1628,11 +1636,13 @@ static int rmt_storage_probe(struct platform_device *pdev)
 	/* For targets that poll SMEM, set status to ready */
 	rmt_storage_set_client_status(srv, 1);
 
+#ifndef CONFIG_FIH_SEMC_S1
 /* Integrate CRs-Fixed: 419695 , 20121219 */
 	ret = register_reboot_notifier(&rmt_storage_reboot_notifier);
 	if (ret)
 		pr_err("%s: Failed to register reboot notifier", __func__);
 /* Integrate CRs-Fixed: 419695 , 20121219 */
+#endif
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &dev_attr_grp);
 	if (ret)

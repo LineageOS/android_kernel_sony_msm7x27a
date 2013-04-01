@@ -83,3 +83,7 @@ obj-$(CONFIG_DEBUG_LL)	+= debug.o
 obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
 
 extra-y := $(head-y) init_task.o vmlinux.lds
+ifdef CONFIG_FIH_SEMC_S1
+# FIH-SW3-KERNEL-TH-write_panic_file-00+
+obj-y	+= fih_sw_info.o
+endif

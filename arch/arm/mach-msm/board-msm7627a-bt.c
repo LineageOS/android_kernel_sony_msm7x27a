@@ -25,18 +25,20 @@
 #include "board-msm7627a.h"
 #include "devices-msm7x2xa.h"
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //+ murphy 2011.11.07
 #define CONFIG_ARIMA_BT_DBG_INFO
 //- murphy 2011.11.07
+#endif
 
 #if defined(CONFIG_BT) && defined(CONFIG_MARIMBA_CORE)
 
 
 static struct bt_vreg_info bt_vregs[] = {
 //+ murphy 2011.11.07
-#if 0
+#ifndef CONFIG_MACH_MSM7X27A_NANHU
 	{"msme1", 2, 1800000, 1800000, 0, NULL},
-	{"bt", 21, 3000000, 3000000, 1, NULL}
+	{"bt", 21, 2900000, 3300000, 1, NULL}
 #else
 	{"msme1", 2, 1800000, 1800000, 0, NULL},
 	{"bt", 21, 3300000, 3300000, 1, NULL} //alvinchen modified 20120618. Original:{"bt", 21, 2900000, 3300000, 1, NULL}
@@ -107,7 +109,11 @@ static unsigned fm_i2s_config_power_off[] = {
 	GPIO_CFG(71, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 };
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 int gpio_bt_sys_rest_en = 12;  //murphy 2011.11.07  original: 133
+#else
+int gpio_bt_sys_rest_en = 133;
+#endif
 static void gpio_bt_config(void)
 {
 	u32 socinfo = socinfo_get_platform_version();
@@ -125,9 +131,11 @@ static void gpio_bt_config(void)
 			gpio_bt_sys_rest_en = 85;
 	}
 	
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 	//+ murphy 2012.10.22
 	gpio_bt_sys_rest_en = 12;
 	//- murphy 2012.10.22
+#endif
 }
 
 static int bt_set_gpio(int on)
@@ -144,11 +152,14 @@ static int bt_set_gpio(int on)
 	{
 		printk(KERN_INFO "[BT_DBG] - bt_set_gpio(), off, %d \n", on);
 	}
+#else
+	pr_debug("%s: Setting SYS_RST_PIN(%d) to %d\n",
+			__func__, gpio_bt_sys_rest_en, on);
 #endif
-
 	if (on) {
 		//+ murphy 2011.09.19
-		#if 1  //re-configure GPIO setting in case AMSS part is not executed okay
+		#ifdef CONFIG_MACH_MSM7X27A_NANHU
+        //re-configure GPIO setting in case AMSS part is not executed okay
 		printk(KERN_INFO "[BT_DBG] - bt_set_gpio(), on = %d, if cond exec \n", on);
 
 		if (machine_is_msm7627a_evb() || machine_is_msm8625_qrd7()) {
@@ -162,6 +173,15 @@ static int bt_set_gpio(int on)
 		{
 			printk(KERN_INFO "[BT_DBG] - GPIO 12 enable OK \n");
 		}
+
+		gpio_set_value(gpio_bt_sys_rest_en, 1);
+        #else
+
+		if (machine_is_msm7627a_evb() || machine_is_msm8625_qrd7()) {
+			rc = gpio_tlmm_config(GPIO_CFG(gpio_bt_sys_rest_en, 0,
+					GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,
+					GPIO_CFG_2MA),
+					GPIO_CFG_ENABLE);
 
 		gpio_set_value(gpio_bt_sys_rest_en, 1);
 		#endif
@@ -852,7 +872,7 @@ static unsigned int msm_bahama_shutdown_power(int value)
 	}
 
 //+ murphy 2011.11.07
-#if 1
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 	rc = bt_set_gpio(0);
 	if (rc) {
 		pr_err("%s: bt_set_gpio = %d\n",

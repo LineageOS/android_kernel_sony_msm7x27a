@@ -190,10 +190,12 @@ static const unsigned int rpc_vers[] = {
 
 static int pmic_rpc_req_reply(struct pmic_buf *tbuf,
 				struct pmic_buf *rbuf, int proc);
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //Edison add ++
 static int pmic_rpc_set_only_plus(uint data0, uint data1, uint data2, 
 	uint data3,uint data4, uint data5,  int num, int proc);
 //Edison add --        
+#endif
 static int pmic_rpc_set_only(uint data0, uint data1, uint data2,
 				uint data3, int num, int proc);
 static int pmic_rpc_set_struct(int, uint, uint *data, uint size, int proc);
@@ -384,6 +386,7 @@ static int pmic_rpc_req_reply(struct pmic_buf *tbuf, struct pmic_buf *rbuf,
 	return rbuf->len;
 }
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //Edison add ++
 static int pmic_rpc_set_only_plus(uint data0, uint data1, uint data2, uint data3,uint data4, uint data5, 
 		int num, int proc)
@@ -443,6 +446,7 @@ static int pmic_rpc_set_only_plus(uint data0, uint data1, uint data2, uint data3
 	return modem_to_linux_err(stat);
 }
 //Edison add --
+#endif
 
 
 /**
@@ -1330,6 +1334,7 @@ int pmic_gpio_get_value(unsigned gpio)
 }
 EXPORT_SYMBOL(pmic_gpio_get_value);
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //Edison add ++
 int pmic_gpio_config_digital_output(uint gpio, uint out_buffer_config, uint voltage_source, 
 uint source, uint out_buffer_strength, uint out_inversion)
@@ -1340,6 +1345,7 @@ uint source, uint out_buffer_strength, uint out_inversion)
 
 }
 //Edison add --
+#endif
 
 int pmic_gpio_get_direction(unsigned gpio)
 {

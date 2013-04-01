@@ -27,8 +27,14 @@ struct msm_cpuidle_state {
 
 #ifdef CONFIG_PM
 s32 msm_cpuidle_get_deep_idle_latency(void);
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+s32 msm_cpuidle_get_deepest_idle_latency(void);	//FIH-SW-KERNEL-KC-TCXO_SD_DURING_DISPLAY_ON-01+
+#endif
 #else
 static inline s32 msm_cpuidle_get_deep_idle_latency(void) { return 0; }
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+static inline s32 msm_cpuidle_get_deepest_idle_latency(void) { return 0; }	//FIH-SW-KERNEL-KC-TCXO_SD_DURING_DISPLAY_ON-01+
+#endif
 #endif
 
 #ifdef CONFIG_CPU_IDLE

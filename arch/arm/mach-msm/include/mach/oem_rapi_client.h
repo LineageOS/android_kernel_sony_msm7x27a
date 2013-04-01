@@ -28,6 +28,7 @@ enum {
 	 * list of oem rapi client events
 	 */
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 	/*++ Huize - 20121107 Add for proximity threshold ++*/
 	OEM_RAPI_CLIENT_EVENT_PROXIMITY_THRESHOLD_GET,
 	OEM_RAPI_CLIENT_EVENT_PROXIMITY_THRESHOLD_SET,
@@ -47,6 +48,7 @@ enum {
 	OEM_RAPI_CLIENT_EVENT_WIFI_CALI_GET,
 	OEM_RAPI_CLIENT_EVENT_WIFI_CALI_SET,
 	/*-- FelexChing - 20120807 Add for wifi calibrate --*/
+#endif
 
 	OEM_RAPI_CLIENT_EVENT_MAX
 

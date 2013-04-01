@@ -69,11 +69,15 @@
 #include <linux/persistent_ram.h>
 //>>Skies-2012/10/16, implement ram console in JB
 
-
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 #define PMEM_KERNEL_EBI1_SIZE	0x3A000
 //20130114-JordanChen , Reduce it due to Nanhu doesn't support LPA
 /*#define MSM_PMEM_AUDIO_SIZE	0x1F4000*/
 #define MSM_PMEM_AUDIO_SIZE	0x5B000
+#else
+#define PMEM_KERNEL_EBI1_SIZE	0x3A000
+#define MSM_PMEM_AUDIO_SIZE	0x1F4000
+#endif
 
 #if defined(CONFIG_GPIO_SX150X)
 enum {
@@ -173,9 +177,13 @@ static struct msm_i2c_platform_data msm_gsbi1_qup_i2c_pdata = {
 };
 
 #ifdef CONFIG_ARCH_MSM7X27A
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //20130114-JordanChen , Reduce MDP size due to Nanhu supports HVGA resolution
 /*#define MSM_PMEM_MDP_SIZE       0x2300000*/
 #define MSM_PMEM_MDP_SIZE       0x1500000
+#else
+#define MSM_PMEM_MDP_SIZE       0x2300000
+#endif
 #define MSM7x25A_MSM_PMEM_MDP_SIZE       0x1500000
 
 #define MSM_PMEM_ADSP_SIZE      0x1200000

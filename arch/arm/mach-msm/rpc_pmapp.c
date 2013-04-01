@@ -44,10 +44,12 @@
 #define PMAPP_DISP_BACKLIGHT_SET_PROC		31
 #define PMAPP_DISP_BACKLIGHT_INIT_PROC		32
 #define PMAPP_VREG_LPM_PINCNTRL_VOTE_PROC	34
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //[Arima Edison] let red led have dimming behavior++
 #define PMAPP_RED_LED_SET_PROC		36
 #define PMAPP_RED_LED_INIT_PROC		37
 //[Arima Edison] let red led have dimming behavior++
+#endif
 
 /* Clock voter name max length */
 #define PMAPP_CLOCK_VOTER_ID_LEN		4
@@ -567,6 +569,7 @@ void pmapp_disp_backlight_init(void)
 }
 EXPORT_SYMBOL(pmapp_disp_backlight_init);
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 //[Arima Edison] let red led have dimming behavior ++
 int pmapp_red_led_set_brightness(int value)
 {
@@ -587,6 +590,7 @@ void pmapp_red_led_init(void)
 }
 EXPORT_SYMBOL(pmapp_red_led_init);
 //[Arima Edison]  let red led have dimming behavior --
+#endif
 
 int pmapp_vreg_lpm_pincntrl_vote(const char *voter_id, uint vreg_id,
 						uint clock_id, uint vote)

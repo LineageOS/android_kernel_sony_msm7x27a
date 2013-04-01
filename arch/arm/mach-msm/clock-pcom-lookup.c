@@ -322,9 +322,15 @@ static struct clk_lookup msm_cmn_clk_7625a_7627a[] __initdata = {
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0036"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-001b"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0010"),
-	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0078"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-006c"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-000d"),
+	/*MTD-MM-SL-CameraPorting-00+{ */
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0078"), //5M-0x3C
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-007a"), //VGA-0X3D
+	CLK_LOOKUP("csi_clk",       csi0_clk.c, 	"msm_camera_mt9v115.0"),
+    CLK_LOOKUP("csi_pclk",      csi0_p_clk.c,   "msm_camera_mt9v115.0"),
+    CLK_LOOKUP("csi_vfe_clk",   csi0_vfe_clk.c, "msm_camera_mt9v115.0"),
+    /*MTD-MM-SL-CameraPorting-00+} */	
 	/*++ Peter - 20121004 Add for using ++*/
 	CLK_LOOKUP("csi_clk",		csi0_clk.c,	"msm_camera_s5k5ca.0"),
 	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,	"msm_camera_s5k5ca.0"),

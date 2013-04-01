@@ -25,16 +25,18 @@ enum {
 	/* SURF expander */
 	GPIO_CORE_EXPANDER_BASE = GPIO_EXPANDER_GPIO_BASE,
 	//+ murphy 2011.09.19
-	#if 1
+	#ifdef CONFIG_MACH_MSM7X27A_NANHU
 	GPIO_BT_SYS_REST_EN     = 12,
 	GPIO_WLAN_EXT_POR_N     = GPIO_CORE_EXPANDER_BASE + 1,
+	GPIO_DISPLAY_PWR_EN,
+	GPIO_BACKLIGHT_EN_, // Arima modification
 	#else
 	GPIO_BT_SYS_REST_EN     = GPIO_CORE_EXPANDER_BASE,
 	GPIO_WLAN_EXT_POR_N,
+	GPIO_DISPLAY_PWR_EN,
+	GPIO_BACKLIGHT_EN,
 	#endif
 	//- murphy 2011.09.19
-	GPIO_DISPLAY_PWR_EN,
-	GPIO_BACKLIGHT_EN_, // Arima modification
 	GPIO_PRESSURE_XCLR,
 	GPIO_VREG_S3_EXP,
 	GPIO_UBM2M_PWRDWN,
@@ -119,6 +121,8 @@ int lcd_camera_power_onoff(int on);
 void __init msm7627a_add_io_devices(void);
 void __init qrd7627a_add_io_devices(void);
 
+#ifdef CONFIG_MACH_MSM7X27A_NANHU
 #define GPIO_BACKLIGHT_EN 8 //20120509-Added by Jordan for LCD backlight
+#endif
 
 #endif

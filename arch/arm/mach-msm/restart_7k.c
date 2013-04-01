@@ -23,19 +23,48 @@
 #include "devices-msm7x2xa.h"
 #include "smd_rpcrouter.h"
 
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+/* FIH-SW3-KERNEL-EL-CHARGING-00 +[*/ 
+extern void bq27520_battery_snooze_mode(bool SetSLP);
+/* FIH-SW3-KERNEL-EL-CHARGING-00 +]*/ 
+#endif
+
 static uint32_t restart_reason = 0x776655AA;
 
 static void msm_pm_power_off(void)
 {
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+	/* FIH-SW3-KERNEL-EL-CHARGING-00 +[*/ 
+	bq27520_battery_snooze_mode(false);
+	/* FIH-SW3-KERNEL-EL-CHARGING-00 +]*/ 
+#endif
 	msm_proc_comm(PCOM_POWER_DOWN, 0, 0);
 	for (;;)
 		;
 }
 
+/* MTD-Kernel-HC-handle_reset-03+[ */
 static void msm_pm_restart(char str, const char *cmd)
 {
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)	
+	uint32_t oem_cmd = SMEM_PROC_COMM_OEM_RESET_CHIP_EBOOT;
+	uint32_t smem_response = 0;
+	uint32_t ret = 0;
+#endif
 	pr_debug("The reset reason is %x\n", restart_reason);
 
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+	/* MTD-Kernel-HC-handle_reset-02+[ */
+	if (cmd)
+	{
+		if (!strncmp(cmd, "panic", 5))
+		{
+			restart_reason = 0x46544443;
+			pr_err("restart_reason = panic\n");
+		}
+	}
+	/* MTD-Kernel-HC-handle_reset-02+] */
+#endif
 	/* Disable interrupts */
 	local_irq_disable();
 	local_fiq_disable();
@@ -49,11 +78,22 @@ static void msm_pm_restart(char str, const char *cmd)
 	 */
 	setup_mm_for_reboot();
 
+#if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+	ret = msm_proc_comm_oem(PCOM_CUSTOMER_CMD1, &oem_cmd, &smem_response, &restart_reason);
+	
+	if (ret != 0)
+	{
+		pr_err("SMEM_PROC_COMM_OEM_RESET_CHIP_EBOOT failed, ret = %d\n", ret);
+		msm_proc_comm(PCOM_RESET_CHIP, &restart_reason, 0);
+	}
+#else
 	msm_proc_comm(PCOM_RESET_CHIP, &restart_reason, 0);
+#endif
 
 	for (;;)
 		;
 }
+/* MTD-Kernel-HC-handle_reset-03+] */
 
 static int msm_reboot_call
 	(struct notifier_block *this, unsigned long code, void *_cmd)

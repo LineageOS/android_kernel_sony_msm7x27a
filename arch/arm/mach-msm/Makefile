@@ -96,8 +96,7 @@ obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging.o
 ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_IPC_LOGGING) += ipc_logging_debug.o
 endif
-# Skies-2012/06/01, Save AMSS log to /proc/last_radio_log [add last_radio_log.o]
-obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o smd_private.o last_radio_log.o
+obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o smd_private.o
 # SoMC patch - Super Stamina Mode
 obj-$(CONFIG_SONY_SSM) += sony_ssm.o
 obj-y += socinfo.o
@@ -395,3 +394,14 @@ obj-$(CONFIG_MSM_VP_REGULATOR) += msm_vp.o
 ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
+
+# MTD-SW3-KERNEL-MP-RPC_Read_NV-00+
+obj-y += rpc_nv.o
+#MTD-BSP-VT-INFO-00+[
+obj-y +=fih_proc_fs.o
+#MTD-BSP-VT-INFO-00+]
+# CONN-EC-WIFI-Porting-01+[
+obj-y += board-sisi-wifi.o
+# CONN-EC-WIFI-Porting-01+]
+
+

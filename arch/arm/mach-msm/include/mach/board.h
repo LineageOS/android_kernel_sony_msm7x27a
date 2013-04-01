@@ -122,8 +122,12 @@ struct msm_camera_sensor_flash_current_driver {
 };
 
 enum msm_camera_ext_led_flash_id {
+	#ifndef CONFIG_CAMERA_FLASH_LM3561
 	MAM_CAMERA_EXT_LED_FLASH_SC628A,
 	MAM_CAMERA_EXT_LED_FLASH_TPS61310,
+	#else
+	MAM_CAMERA_EXT_LED_FLASH_LM3561,/*MTD-MM-SL-SupportFlash-00+ */
+	#endif
 };
 
 struct msm_camera_sensor_flash_external {
@@ -235,9 +239,11 @@ struct msm_camera_i2c_conf {
 
 struct msm_camera_sensor_platform_info {
 	int mount_angle;
+    #ifdef CONFIG_MACH_MSM7X27A_NANHU
 	//Flea++
        int hw_version;
 	//Flea--
+    #endif
 	int sensor_reset;
 	struct camera_vreg_t *cam_vreg;
 	int num_vreg;
@@ -279,6 +285,15 @@ struct msm_camera_sensor_info {
 	int sensor_pwd;
 	int vcm_pwd;
 	int vcm_enable;
+    #if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+	/*MTD-MM-SL-ImproveMainCamera-00+{ */
+	int sensor_f_pwd;
+	int sensor_f_reset;
+	int vreg_v1p2;
+	int vreg_v1p8;
+	int vreg_v2p8;
+	/*MTD-MM-SL-ImproveMainCamera-00+} */
+    #endif
 	int mclk;
 	int flash_type;
 	struct msm_camera_sensor_platform_info *sensor_platform_info;
@@ -446,7 +461,12 @@ struct mddi_platform_data {
 struct mipi_dsi_platform_data {
 	int vsync_gpio;
 	int (*dsi_power_save)(int on);
+    #if defined (CONFIG_MACH_MSM8625_JLO) || defined (CONFIG_MACH_MSM8625_TAP) || defined (CONFIG_MACH_MSM8625_MES)
+/* FIH-SW-MM-VH-DISPLAY-JB00* */
+	int (*dsi_client_reset)(int hold);
+    #else
 	int (*dsi_client_reset)(void);
+    #endif
 	int (*get_lane_config)(void);
 	char (*splash_is_enabled)(void);
 	int target_type;
